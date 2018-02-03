@@ -263,3 +263,9 @@ go_get(
     get = 'github.com/alecthomas/participle',
     revision = '48f3ab340563c5a91f83efdc0dc3f14f5d9364a2',
 )
+
+go_get(
+    name = 'skylark',
+    get = 'github.com/google/skylark',
+    revision = '69e9615dbc27ae3b4fa64d1fcfa01434f8af4cee',
+)

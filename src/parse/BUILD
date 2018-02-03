@@ -21,6 +21,7 @@ cgo_library(
         '//src/parse/asp',
         '//src/parse/asp/builtins',
         '//src/parse/cffi:please_parser_static',
+        '//src/parse/skylark',
         '//src/utils',
         '//third_party/go:gcfg',
         '//third_party/go:logging',
@@ -31,7 +32,10 @@ cgo_library(
 filegroup(
     name = 'builtin_rules',
     srcs = glob(['rules/*.build_defs']),
-    visibility = ['//src/parse/asp/builtins:all'],
+    visibility = [
+        '//src/parse/asp/builtins:all',
+        '//src/parse/skylark:all',
+    ],
 )
 
 # Note that because these scripts are used during the bootstrap process, they can't
