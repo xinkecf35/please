@@ -12,6 +12,38 @@ import (
 	"core"
 )
 
+// registerBuiltins registers the various global builtins.
+func registerBuiltins(config *core.Configuration) {
+	skylark.Universe["CONFIG"] = makeConfig(config)
+	skylark.Universe["build_rule"] = skylark.NewBuiltin("build_rule", buildRule)
+	skylark.Universe["package"] = skylark.NewBuiltin("package", pkg)
+	skylark.Universe["subinclude"] = skylark.NewBuiltin("subinclude", subinclude)
+	skylark.Universe["fail"] = skylark.NewBuiltin("fail", fail)
+	skylark.Universe["get_labels"] = skylark.NewBuiltin("get_labels", getLabels)
+	skylark.Universe["get_command"] = skylark.NewBuiltin("get_command", getCommand)
+	skylark.Universe["set_command"] = skylark.NewBuiltin("set_command", setCommand)
+	skylark.Universe["add_out"] = skylark.NewBuiltin("add_out", setCommand)
+	skylark.Universe["add_licence"] = skylark.NewBuiltin("add_licence", setCommand)
+	skylark.Universe["add_dep"] = skylark.NewBuiltin("add_dep", setCommand)
+	skylark.Universe["add_exported_dep"] = skylark.NewBuiltin("add_dep", setCommand)
+	skylark.Universe["log"] = skylarkstruct.FromStringDict(skylarkstruct.Default, skylark.StringDict{
+		"debug":   logBuiltin("log.debug", log.Debug),
+		"info":    logBuiltin("log.info", log.Info),
+		"notice":  logBuiltin("log.notice", log.Notice),
+		"warning": logBuiltin("log.warning", log.Warning),
+		"error":   logBuiltin("log.error", log.Error),
+		"fatal":   logBuiltin("log.fatal", log.Fatalf),
+	})
+}
+
+// logBuiltin creates a builtin for logging things.
+func logBuiltin(name string, f func(format string, args ...interface{})) skylark.Value {
+	return skylark.NewBuiltin(name, func(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+		f("log not implemented")
+		return skylark.None, nil
+	})
+}
+
 // makeConfig creates a new config object from the given configuration.
 func makeConfig(config *core.Configuration) skylark.Value {
 	c := make(skylark.StringDict, 100)
@@ -49,7 +81,6 @@ func makeConfig(config *core.Configuration) skylark.Value {
 	// These can't be changed (although really you shouldn't be able to find out the OS at parse time)
 	c["OS"] = skylark.String(runtime.GOOS)
 	c["ARCH"] = skylark.String(runtime.GOARCH)
-
 	return skylarkstruct.FromStringDict(skylarkstruct.Default, c)
 }
 
@@ -65,5 +96,32 @@ func fail(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwarg
 func buildRule(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
 	pkg := thread.Local("_pkg").(*core.Package)
 	log.Warning("adding target %s %s %s", pkg.Name, args, kwargs)
+	return skylark.None, nil
+}
+
+// pkg implements the package() builtin.
+func pkg(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+	log.Fatalf("package() not implemented")
+	return skylark.None, nil
+}
+
+// subinclude implements the subinclude() builtin.
+func subinclude(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+	//log.Fatalf("subinclude() not implemented")
+	return skylark.None, nil
+}
+
+// getLabels implements the get_labels builtin.
+func getLabels(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+	return &skylark.List{}, nil
+}
+
+// getCommand implements the get_command builtin.
+func getCommand(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+	return skylark.String(""), nil
+}
+
+// setCommand implements the get_command builtin.
+func setCommand(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
 	return skylark.None, nil
 }

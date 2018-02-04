@@ -21,6 +21,7 @@ genrule(
     ],
     outs = [
         'builtins.sky',
+        'bazel_compat.build_defs',
         'c_rules.build_defs',
         'cc_rules.build_defs',
         'go_rules.build_defs',

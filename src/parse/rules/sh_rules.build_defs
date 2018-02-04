@@ -110,7 +110,7 @@ def sh_test(name:str, src:str=None, labels:list=None, data:list=None, deps:list=
     timeout, labels = _test_size_and_timeout(size, timeout, labels)
     build_rule(
         name=name,
-        srcs=[src or test],
+        srcs=[src],
         data=data,
         deps=deps,
         outs=[name + '.sh'],

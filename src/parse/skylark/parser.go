@@ -22,18 +22,24 @@ func NewParser(state *core.BuildState) *Parser {
 	// We require these Skylark settings
 	resolve.AllowNestedDef = true
 	resolve.AllowLambda = true
-	// Skylark global builtins
-	skylark.Universe["build_rule"] = skylark.NewBuiltin("build_rule", buildRule)
-	skylark.Universe["fail"] = skylark.NewBuiltin("fail", fail)
-	skylark.Universe["CONFIG"] = makeConfig(state.Config)
+	registerBuiltins(state.Config)
 	p := &Parser{}
 	t := p.newThread(nil)
 	t.SetLocal("PACKAGE_NAME", "builtins")
-	// Load builtins.sky - that triggers loading of everything else.
-	globals := skylark.StringDict{}
-	if err := skylark.ExecFile(t, "builtins.sky", MustAsset("builtins.sky"), globals); err != nil {
-		log.Fatalf("Failed to load builtin rules: %s", err)
-	}
+
+	// The ordering here is deliberate; functions must be defined before any
+	// other function that might call it, because Skylark binds them early
+	// (in contrast to Python, which would bind them only when used).
+	p.loadBuiltins(t, "builtins.sky")
+	p.loadBuiltins(t, "misc_rules.build_defs")
+	p.loadBuiltins(t, "cc_rules.build_defs")
+	p.loadBuiltins(t, "c_rules.build_defs")
+	p.loadBuiltins(t, "go_rules.build_defs")
+	p.loadBuiltins(t, "python_rules.build_defs")
+	p.loadBuiltins(t, "java_rules.build_defs")
+	p.loadBuiltins(t, "sh_rules.build_defs")
+	p.loadBuiltins(t, "proto_rules.build_defs")
+	p.loadBuiltins(t, "bazel_compat.build_defs")
 	return p
 }
 
@@ -59,6 +65,17 @@ func (p *Parser) load(thread *skylark.Thread, module string) (skylark.StringDict
 	t := p.newThread(nil)
 	globals := skylark.StringDict{}
 	return globals, skylark.ExecFile(t, module, b, globals)
+}
+
+// loadBuiltins loads some builtins from a file and adds them to Skylark's universe.
+func (p *Parser) loadBuiltins(thread *skylark.Thread, filename string) {
+	globals := skylark.StringDict{}
+	if err := skylark.ExecFile(thread, filename, MustAsset(filename), globals); err != nil {
+		log.Fatalf("Failed to load builtin rules: %s", err)
+	}
+	for k, v := range globals {
+		skylark.Universe[k] = v
+	}
 }
 
 // newThread creates a new Skylark thread.

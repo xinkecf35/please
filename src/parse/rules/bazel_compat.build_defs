@@ -58,3 +58,8 @@ def bind(name, actual=None, **kwargs):
 cxx_binary = cc_binary
 cxx_library = cc_library
 cxx_test = cc_test
+
+# Bazel names them this way.
+py_library = python_library
+py_binary = python_binary
+py_test = python_test

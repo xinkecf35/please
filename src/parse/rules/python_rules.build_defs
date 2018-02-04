@@ -418,8 +418,7 @@ def python_wheel(name:str, version:str, hashes:list=None, package_name:str=None,
     package_name = package_name or name.replace('-', '_')
     url_base = repo or CONFIG.PYTHON_WHEEL_REPO
     if not url_base:
-        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly ' +
-                         'to python_wheel')
+        raise ParseError('python.wheel_repo is not set in the config, must pass repo explicitly to python_wheel')
     urls = []
     if name_scheme:
         urls.append(name_scheme.format(url_base=url_base,
@@ -518,9 +517,3 @@ _PYTHON_BINARY_CMDS = {
     'opt': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict',
     'stripped': '$TOOL -i . -o $OUTS --suffix=.pex.zip --preamble_from="$SRC" --include_other --add_init_py --strict -e .py -x "*.py"',
 }
-
-
-if CONFIG.BAZEL_COMPATIBILITY:
-    py_library = python_library
-    py_binary = python_binary
-    py_test = python_test
