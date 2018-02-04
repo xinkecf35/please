@@ -19,6 +19,8 @@ DOCSTRING_RE = re.compile(' *([^ ]+) \\(([^\)]+)\\):( Deprecated)? *([^\n]+(?:\n
 def read_functions(filenames):
     """Reads the given python files and yields the function arguments from them."""
     for filename in filenames:
+        if filename.endswith('bazel_compat.build_defs'):
+            continue
         # Infer a language from the filename. Theoretically one should derive this from
         # `requires` stanzas but that'd be stupidly hard to do...
         lang, _, _ = filename.partition('_')

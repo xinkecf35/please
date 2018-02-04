@@ -601,28 +601,3 @@ def _jarcat_cmd(main_class=None, preamble=None, manifest=None):
     if manifest:
         cmd += ' --manifest "$SRCS"'
     return cmd, {'jarcat': [CONFIG.JARCAT_TOOL]}
-
-
-if CONFIG.BAZEL_COMPATIBILITY:
-    def java_toolchain(javac=None, source_version=None, target_version=None, **kwargs):
-        """Mimics some effort at Bazel compatibility.
-
-        This doesn't really have the same semantics and ignores a bunch of arguments but it
-        isn't easy for us to behave the same way that they do.
-        """
-        package(
-            javac_tool = javac,
-            java_source_level = source_version,
-            java_target_level = target_version,
-        )
-
-    def java_import(name, jars, deps=None, exports=None, test_only=False, visibility=None):
-        """Mimics java_import, as far as I can tell we don't need to do much here."""
-        filegroup(
-            name = name,
-            srcs = jars,
-            deps = deps,
-            exported_deps = exports,
-            test_only = test_only,
-            visibility = visibility,
-        )

@@ -5,9 +5,6 @@
 package skylark
 
 import (
-	"sort"
-	"sync"
-
 	"github.com/google/skylark"
 	"github.com/google/skylark/resolve"
 	"gopkg.in/op/go-logging.v1"
@@ -19,38 +16,32 @@ var log = logging.MustGetLogger("skylark")
 
 // A Parser is our wrapper around the Skylark parser.
 type Parser struct {
-	globals skylark.StringDict
-	mutex   sync.Mutex
 }
 
 func NewParser(state *core.BuildState) *Parser {
 	// We require these Skylark settings
 	resolve.AllowNestedDef = true
 	resolve.AllowLambda = true
-	p := &Parser{
-		globals: skylark.StringDict{},
-	}
-	t := p.newThread("builtins")
-	// Preload builtins
-	p.globals["CONFIG"] = makeConfig(state.Config)
-	// Load all the globals now
-	dir, _ := AssetDir("")
-	sort.Strings(dir)
-	// Temp hack - since c_library calls through to cc_library etc, we must parse them in order since
-	// Skylark binds them on initial parse (unlike Python, which evaluates them at execution time).
-	dir[1], dir[2] = dir[2], dir[1]
-	for _, filename := range dir {
-		if err := skylark.ExecFile(t, filename, MustAsset(filename), p.globals); err != nil {
-			log.Fatalf("Failed to load builtin rules from %s: %s", filename, err)
-		}
+	// Skylark global builtins
+	skylark.Universe["build_rule"] = skylark.NewBuiltin("build_rule", buildRule)
+	skylark.Universe["fail"] = skylark.NewBuiltin("fail", fail)
+	skylark.Universe["CONFIG"] = makeConfig(state.Config)
+	p := &Parser{}
+	t := p.newThread(nil)
+	t.SetLocal("PACKAGE_NAME", "builtins")
+	// Load builtins.sky - that triggers loading of everything else.
+	globals := skylark.StringDict{}
+	if err := skylark.ExecFile(t, "builtins.sky", MustAsset("builtins.sky"), globals); err != nil {
+		log.Fatalf("Failed to load builtin rules: %s", err)
 	}
 	return p
 }
 
 // ParseFile parses a single BUILD file.
 func (p *Parser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
-	t := p.newThread(pkg.Name)
-	return skylark.ExecFile(t, filename, nil, p.globals)
+	t := p.newThread(pkg)
+	globals := skylark.StringDict{}
+	return skylark.ExecFile(t, filename, nil, globals)
 }
 
 // print implements Skylark's print() builtin.
@@ -60,16 +51,25 @@ func (p *Parser) print(thread *skylark.Thread, msg string) {
 
 // load implements Skylark's module loading.
 func (p *Parser) load(thread *skylark.Thread, module string) (skylark.StringDict, error) {
-	log.Fatalf("load not implemented: %s", module)
-	return skylark.StringDict{}, nil
+	b, err := Asset(module)
+	if err != nil {
+		return nil, err
+	}
+	// TODO(peterebden): Proper subinclude deferral
+	t := p.newThread(nil)
+	globals := skylark.StringDict{}
+	return globals, skylark.ExecFile(t, module, b, globals)
 }
 
 // newThread creates a new Skylark thread.
-func (p *Parser) newThread(packageName string) *skylark.Thread {
+func (p *Parser) newThread(pkg *core.Package) *skylark.Thread {
 	t := &skylark.Thread{
 		Print: p.print,
 		Load:  p.load,
 	}
-	t.SetLocal("PACKAGE_NAME", packageName)
+	if pkg != nil {
+		t.SetLocal("PACKAGE_NAME", pkg.Name)
+		t.SetLocal("_pkg", pkg)
+	}
 	return t
 }

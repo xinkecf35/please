@@ -11,3 +11,17 @@ def get_base_path():
 
 def package_name():
     return PACKAGE_NAME
+
+
+# The ordering here is deliberate; functions must be defined before any
+# other function that might call it, because Skylark binds them early
+# (in contrast to Python, which would bind them only when used).
+load('misc_rules.build_defs', 'genrule', 'gentest', 'filegroup', 'hash_filegroup', 'remote_file', 'tarball', 'decompose', 'check_config')
+load('cc_rules.build_defs', 'cc_library', 'cc_object', 'cc_static_library', 'cc_shared_object', 'cc_binary', 'cc_test', 'cc_embed_binary')
+load('c_rules.build_defs', 'c_library', 'c_object', 'c_static_library', 'c_shared_object', 'c_binary', 'c_test', 'c_embed_binary')
+load('go_rules.build_defs', 'go_library', 'go_generate', 'cgo_library', 'go_binary', 'go_test', 'cgo_test', 'go_get')
+load('python_rules.build_defs', 'python_library', 'python_binary', 'python_test', 'pip_library', 'python_wheel')
+load('java_rules.build_defs', 'java_library', 'java_module', 'java_runtime_image', 'java_binary', 'java_test', 'maven_jar', 'maven_jars')
+load('sh_rules.build_defs', 'sh_library', 'sh_binary', 'sh_test', 'sh_cmd')
+load('proto_rules.build_defs', 'proto_library', 'grpc_library', 'proto_language')
+load('bazel_compat.build_defs', 'java_toolchain', 'java_import')

@@ -1,6 +1,7 @@
 package skylark
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
 	"strings"
@@ -50,4 +51,19 @@ func makeConfig(config *core.Configuration) skylark.Value {
 	c["ARCH"] = skylark.String(runtime.GOARCH)
 
 	return skylarkstruct.FromStringDict(skylarkstruct.Default, c)
+}
+
+// fail implements the only error-handling primitive you'll ever need.
+func fail(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("msg is a required argument to fail()")
+	}
+	return nil, fmt.Errorf("%s", args[1])
+}
+
+// buildRule is the builtin that creates & registers a new build rule.
+func buildRule(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+	pkg := thread.Local("_pkg").(*core.Package)
+	log.Warning("adding target %s %s %s", pkg.Name, args, kwargs)
+	return skylark.None, nil
 }

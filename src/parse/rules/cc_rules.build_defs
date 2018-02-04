@@ -825,9 +825,3 @@ def _binary_transitive_labels(c, linker_flags, pkg_config_libs, shared=False):
             for k, v in cmds.items():
                 set_command(name, k, v)
     return apply_transitive_labels
-
-
-# For nominal Buck compatibility. The cc_ forms are preferred.
-cxx_binary = cc_binary
-cxx_library = cc_library
-cxx_test = cc_test

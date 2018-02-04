@@ -1,0 +1,60 @@
+def java_toolchain(javac=None, source_version=None, target_version=None, **kwargs):
+    """Mimics some effort at Bazel compatibility.
+
+    This doesn't really have the same semantics and ignores a bunch of arguments but it
+    isn't easy for us to behave the same way that they do.
+    """
+    package(
+        javac_tool = javac,
+        java_source_level = source_version,
+        java_target_level = target_version,
+    )
+
+
+def java_import(name, jars, deps=None, exports=None, test_only=False, visibility=None):
+    """Mimics java_import, as far as I can tell we don't need to do much here."""
+    filegroup(
+        name = name,
+        srcs = jars,
+        deps = deps,
+        exported_deps = exports,
+        test_only = test_only,
+        visibility = visibility,
+    )
+
+
+def exports_files(srcs, name='exported_files', visibility=['PUBLIC'], licenses=None):
+    """Makes a bunch of files available as a filegroup.
+
+    Note that the semantics are not the same as Bazel; it lifts the restrictions on those
+    files being available to other packages, whereas we're just creating a rule. It's not
+    impossible to extend Please to support that but right now we're not bothering.
+    """
+    filegroup(
+        name = name,
+        srcs = srcs,
+        visibility = visibility,
+    )
+
+
+def bind(name, actual=None, **kwargs):
+    """Mimics the Bazel bind() function which binds some target or sub-target into our repo.
+
+    This does not map well at all; we don't do sub-repos in the way they do, so for now this
+    is a quick and dirty attempt to make it work for maven_jar rules at least.
+    """
+    if not actual:
+        return
+    if actual.startswith('@') and actual.endswith('//jar'):
+        actual = ':' + actual[:-len('//jar')].lstrip('@')
+    filegroup(
+        name = name,
+        srcs = [actual],
+        visibility = ['PUBLIC'],
+    )
+
+
+# For nominal Buck compatibility. The cc_ forms are preferred.
+cxx_binary = cc_binary
+cxx_library = cc_library
+cxx_test = cc_test

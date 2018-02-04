@@ -26,6 +26,8 @@ def remove_type_hints(contents):
 
 def read_functions(filename):
     """Reads the given python file and yields the function arguments in it."""
+    if filename.endswith('bazel_compat.build_defs'):
+        return
     with open(filename) as f:
         tree = ast.parse(remove_type_hints(f.read()), f.name)
         for i, node in enumerate(ast.iter_child_nodes(tree)):
