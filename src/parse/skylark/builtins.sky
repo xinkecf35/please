@@ -1,0 +1,13 @@
+# Builtin functions that are implemented in terms of existing functions.
+
+def isinstance(x, t):
+    """Only works for single types, not sequences of them."""
+    return type(x) == type(t)
+
+
+def get_base_path():
+    return PACKAGE_NAME
+
+
+def package_name():
+    return PACKAGE_NAME

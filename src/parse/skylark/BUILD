@@ -15,8 +15,12 @@ go_library(
 
 genrule(
     name = 'builtin_rules',
-    srcs = ['//src/parse:builtin_rules'],
+    srcs = [
+        'builtins.sky',
+        '//src/parse:builtin_rules',
+    ],
     outs = [
+        'builtins.sky',
         'c_rules.build_defs',
         'cc_rules.build_defs',
         'go_rules.build_defs',

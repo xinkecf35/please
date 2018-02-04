@@ -19,10 +19,8 @@ var log = logging.MustGetLogger("skylark")
 
 // A Parser is our wrapper around the Skylark parser.
 type Parser struct {
-	threads     []*skylark.Thread
-	busyThreads []*skylark.Thread
-	globals     skylark.StringDict
-	mutex       sync.Mutex
+	globals skylark.StringDict
+	mutex   sync.Mutex
 }
 
 func NewParser(state *core.BuildState) *Parser {
@@ -30,24 +28,19 @@ func NewParser(state *core.BuildState) *Parser {
 	resolve.AllowNestedDef = true
 	resolve.AllowLambda = true
 	p := &Parser{
-		threads: make([]*skylark.Thread, state.Config.Please.NumThreads),
 		globals: skylark.StringDict{},
 	}
-	for i := range p.threads {
-		p.threads[i] = &skylark.Thread{
-			Print: p.print,
-			Load:  p.load,
-		}
-	}
+	t := p.newThread("builtins")
 	// Preload builtins
 	p.globals["CONFIG"] = makeConfig(state.Config)
 	// Load all the globals now
 	dir, _ := AssetDir("")
 	sort.Strings(dir)
-	// Temp hack - since c_library calls through to cc_library etc, we must parse them in order.
-	dir[0], dir[1] = dir[1], dir[0]
+	// Temp hack - since c_library calls through to cc_library etc, we must parse them in order since
+	// Skylark binds them on initial parse (unlike Python, which evaluates them at execution time).
+	dir[1], dir[2] = dir[2], dir[1]
 	for _, filename := range dir {
-		if err := skylark.ExecFile(p.threads[0], filename, MustAsset(filename), p.globals); err != nil {
+		if err := skylark.ExecFile(t, filename, MustAsset(filename), p.globals); err != nil {
 			log.Fatalf("Failed to load builtin rules from %s: %s", filename, err)
 		}
 	}
@@ -56,8 +49,7 @@ func NewParser(state *core.BuildState) *Parser {
 
 // ParseFile parses a single BUILD file.
 func (p *Parser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
-	t := p.getThread()
-	defer p.releaseThread(t)
+	t := p.newThread(pkg.Name)
 	return skylark.ExecFile(t, filename, nil, p.globals)
 }
 
@@ -72,33 +64,12 @@ func (p *Parser) load(thread *skylark.Thread, module string) (skylark.StringDict
 	return skylark.StringDict{}, nil
 }
 
-// getThread grabs a Skylark thread.
-// This is a bit awkward; we have a concept of a 'thread id' but it isn't passed through to this point
-// so we have to do some pooling of them manually.
-func (p *Parser) getThread() *skylark.Thread {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	if len(p.threads) == 0 {
-		// This shouldn't really happen, because we have as many threads as workers.
-		log.Fatalf("No threads available")
+// newThread creates a new Skylark thread.
+func (p *Parser) newThread(packageName string) *skylark.Thread {
+	t := &skylark.Thread{
+		Print: p.print,
+		Load:  p.load,
 	}
-	idx := len(p.threads) - 1
-	t := p.threads[idx]
-	p.threads = p.threads[:idx]
-	p.busyThreads = append(p.busyThreads, t)
+	t.SetLocal("PACKAGE_NAME", packageName)
 	return t
-}
-
-// releaseThread releases a thread previously returned by getThread.
-func (p *Parser) releaseThread(thread *skylark.Thread) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	threads := make([]*skylark.Thread, 0, len(p.busyThreads)-1)
-	for _, t := range p.busyThreads {
-		if t != thread {
-			threads = append(threads, t)
-		}
-	}
-	p.busyThreads = threads
-	p.threads = append(p.threads, thread)
 }
