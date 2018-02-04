@@ -19,6 +19,7 @@ func registerBuiltins(config *core.Configuration) {
 	skylark.Universe["package"] = skylark.NewBuiltin("package", pkg)
 	skylark.Universe["subinclude"] = skylark.NewBuiltin("subinclude", subinclude)
 	skylark.Universe["fail"] = skylark.NewBuiltin("fail", fail)
+	skylark.Universe["glob"] = skylark.NewBuiltin("glob", glob)
 	skylark.Universe["get_labels"] = skylark.NewBuiltin("get_labels", getLabels)
 	skylark.Universe["get_command"] = skylark.NewBuiltin("get_command", getCommand)
 	skylark.Universe["set_command"] = skylark.NewBuiltin("set_command", setCommand)
@@ -124,4 +125,33 @@ func getCommand(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple,
 // setCommand implements the get_command builtin.
 func setCommand(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
 	return skylark.None, nil
+}
+
+// glob implements the glob() builtin.
+func glob(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
+	var includes, exclude, excludes *skylark.List
+	hidden := false
+	if err := skylark.UnpackArgs("glob", args, kwargs, "includes", includes, "exclude?", exclude, "excludes?", excludes, "hidden?", &hidden); err != nil {
+		return skylark.None, err
+	}
+	// TODO(peterebden): get rid of excludes...
+	e := append(toStringList(exclude), toStringList(excludes)...)
+	pkg := thread.Local("_pkg").(*core.Package)
+	l := core.Glob(pkg.Name, toStringList(includes), e, e, hidden)
+	ret := make([]skylark.Value, len(l))
+	for i, f := range l {
+		ret[i] = skylark.String(f)
+	}
+	return skylark.NewList(ret), nil
+}
+
+func toStringList(l *skylark.List) []string {
+	if l == nil {
+		return nil
+	}
+	ret := make([]string, l.Len())
+	for i := range ret {
+		ret[i] = string(l.Index(i).(skylark.String))
+	}
+	return ret
 }
