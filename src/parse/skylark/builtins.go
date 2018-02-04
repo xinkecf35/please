@@ -95,13 +95,13 @@ func fail(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwarg
 // buildRule is the builtin that creates & registers a new build rule.
 func buildRule(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
 	pkg := thread.Local("_pkg").(*core.Package)
-	log.Warning("adding target %s %s %s", pkg.Name, args, kwargs)
+	log.Info("adding target %s %s %s", pkg.Name, args, kwargs)
 	return skylark.None, nil
 }
 
 // pkg implements the package() builtin.
 func pkg(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
-	log.Fatalf("package() not implemented")
+	//log.Fatalf("package() not implemented")
 	return skylark.None, nil
 }
 
