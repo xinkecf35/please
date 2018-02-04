@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/google/skylark"
+	"github.com/google/skylark/resolve"
 	"gopkg.in/op/go-logging.v1"
 
 	"core"
@@ -25,8 +26,12 @@ type Parser struct {
 }
 
 func NewParser(state *core.BuildState) *Parser {
+	// We require these Skylark settings
+	resolve.AllowNestedDef = true
+	resolve.AllowLambda = true
 	p := &Parser{
 		threads: make([]*skylark.Thread, state.Config.Please.NumThreads),
+		globals: skylark.StringDict{},
 	}
 	for i := range p.threads {
 		p.threads[i] = &skylark.Thread{
@@ -34,6 +39,8 @@ func NewParser(state *core.BuildState) *Parser {
 			Load:  p.load,
 		}
 	}
+	// Preload builtins
+	p.globals["CONFIG"] = makeConfig(state.Config)
 	// Load all the globals now
 	dir, _ := AssetDir("")
 	sort.Strings(dir)

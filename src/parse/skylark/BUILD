@@ -1,6 +1,7 @@
 go_library(
     name = 'skylark',
     srcs = [
+        'builtins.go',
         'parser.go',
         ':builtin_rule_data',
     ],

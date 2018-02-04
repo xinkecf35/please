@@ -267,5 +267,6 @@ go_get(
 go_get(
     name = 'skylark',
     get = 'github.com/google/skylark',
+    install = ['github.com/google/skylark/skylarkstruct'],
     revision = '69e9615dbc27ae3b4fa64d1fcfa01434f8af4cee',
 )
