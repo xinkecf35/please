@@ -1,6 +1,9 @@
 go_library(
     name = 'skylark',
-    srcs = ['parser.go', ':builtin_rule_data'],
+    srcs = [
+        'parser.go',
+        ':builtin_rule_data',
+    ],
     deps = [
         '//src/core',
         '//third_party/go:logging',
@@ -22,7 +25,14 @@ genrule(
         'python_rules.build_defs',
         'sh_rules.build_defs',
     ],
-    cmd = 'for SRC in $SRCS; do sed -re "s/:((bool|int|str|list|dict|function)\\|?)+//g" $SRC > $(basename $SRC); done',
+    cmd = '$TOOL $SRCS',
+    tools = [':translate'],
+)
+
+filegroup(
+    name = 'translate',
+    srcs = ['translate.py'],
+    binary = True,
 )
 
 go_bindata(
