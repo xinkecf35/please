@@ -40,6 +40,10 @@ func NewParser(state *core.BuildState) *Parser {
 	p.loadBuiltins(t, "sh_rules.build_defs")
 	p.loadBuiltins(t, "proto_rules.build_defs")
 	p.loadBuiltins(t, "bazel_compat.build_defs")
+	for _, preload := range state.Config.Parse.PreloadBuildDefs {
+		log.Debug("Preloading build defs from %s...", preload)
+		p.loadGlobals(t, preload, nil)
+	}
 	return p
 }
 
@@ -67,10 +71,15 @@ func (p *Parser) load(thread *skylark.Thread, module string) (skylark.StringDict
 	return globals, skylark.ExecFile(t, module, b, globals)
 }
 
-// loadBuiltins loads some builtins from a file and adds them to Skylark's universe.
+// loadBuiltins loads some builtins from a prepackaged asset and adds them to Skylark's universe.
 func (p *Parser) loadBuiltins(thread *skylark.Thread, filename string) {
+	p.loadGlobals(thread, filename, MustAsset(filename))
+}
+
+// loadGlobals loads some builtins from a file (or data) and adds them to Skylark's universe.
+func (p *Parser) loadGlobals(thread *skylark.Thread, filename string, data interface{}) {
 	globals := skylark.StringDict{}
-	if err := skylark.ExecFile(thread, filename, MustAsset(filename), globals); err != nil {
+	if err := skylark.ExecFile(thread, filename, data, globals); err != nil {
 		log.Fatalf("Failed to load builtin rules: %s", err)
 	}
 	for k, v := range globals {

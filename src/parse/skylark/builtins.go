@@ -191,5 +191,5 @@ func toStringList(l []string) *skylark.List {
 	for i, f := range l {
 		ret[i] = skylark.String(f)
 	}
-	return skylark.NewList(ret), nil
+	return skylark.NewList(ret)
 }
