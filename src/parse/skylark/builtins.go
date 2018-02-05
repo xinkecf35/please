@@ -2,6 +2,7 @@ package skylark
 
 import (
 	"fmt"
+	"path"
 	"reflect"
 	"runtime"
 	"strings"
@@ -11,6 +12,18 @@ import (
 
 	"core"
 )
+
+// An errDeferParse is the error type returned for subinclude() calls that require a target to be built.
+type errDeferParse struct {
+	Label core.BuildLabel
+}
+
+// Error implements the error interface.
+func (err errDeferParse) Error() string {
+	return "Requires build of " + err.Label.String()
+}
+
+const subincludePackageName = "_remote"
 
 // registerBuiltins registers the various global builtins.
 func registerBuiltins(config *core.Configuration) {
@@ -88,9 +101,9 @@ func makeConfig(config *core.Configuration) skylark.Value {
 // fail implements the only error-handling primitive you'll ever need.
 func fail(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
 	if len(args) < 1 {
-		return nil, fmt.Errorf("msg is a required argument to fail()")
+		return skylark.None, fmt.Errorf("msg is a required argument to fail()")
 	}
-	return nil, fmt.Errorf("%s", args[1])
+	return skylark.None, fmt.Errorf("%s", args[1])
 }
 
 // buildRule is the builtin that creates & registers a new build rule.
@@ -108,7 +121,28 @@ func pkg(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs
 
 // subinclude implements the subinclude() builtin.
 func subinclude(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwargs []skylark.Tuple) (skylark.Value, error) {
-	//log.Fatalf("subinclude() not implemented")
+	var target, hash string
+	if err := skylark.UnpackArgs("subinclude", args, kwargs, "target", &target, "hash?", &hash); err != nil {
+		return skylark.None, err
+	} else if strings.HasPrefix(target, "http") {
+		return skylark.None, fmt.Errorf("remote subincludes not yet supported")
+	}
+	l, err := core.TryParseBuildLabel(target, "")
+	if err != nil {
+		return skylark.None, err
+	}
+	t := getState(thread).Graph.Target(l)
+	if t == nil || t.State() < core.Built {
+		// The target is not yet built. Defer parsing it until it is.
+		return skylark.None, errDeferParse{Label: l}
+	} else if l.PackageName != subincludePackageName {
+		getPkg(thread).RegisterSubinclude(l)
+	}
+	for _, out := range t.Outputs() {
+		filename := path.Join(t.OutDir(), out)
+		log.Warning("%s", filename)
+		log.Fatalf("%s", skylark.Universe)
+	}
 	return skylark.None, nil
 }
 
@@ -135,17 +169,13 @@ func glob(thread *skylark.Thread, fn *skylark.Builtin, args skylark.Tuple, kwarg
 		return skylark.None, err
 	}
 	// TODO(peterebden): get rid of excludes...
-	e := append(toStringList(exclude), toStringList(excludes)...)
+	e := append(fromStringList(exclude), fromStringList(excludes)...)
 	pkg := thread.Local("_pkg").(*core.Package)
-	l := core.Glob(pkg.Name, toStringList(includes), e, e, hidden)
-	ret := make([]skylark.Value, len(l))
-	for i, f := range l {
-		ret[i] = skylark.String(f)
-	}
-	return skylark.NewList(ret), nil
+	l := core.Glob(pkg.Name, fromStringList(includes), e, e, hidden)
+	return toStringList(l), nil
 }
 
-func toStringList(l *skylark.List) []string {
+func fromStringList(l *skylark.List) []string {
 	if l == nil {
 		return nil
 	}
@@ -154,4 +184,12 @@ func toStringList(l *skylark.List) []string {
 		ret[i] = string(l.Index(i).(skylark.String))
 	}
 	return ret
+}
+
+func toStringList(l []string) *skylark.List {
+	ret := make([]skylark.Value, len(l))
+	for i, f := range l {
+		ret[i] = skylark.String(f)
+	}
+	return skylark.NewList(ret), nil
 }

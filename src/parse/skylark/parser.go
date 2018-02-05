@@ -24,7 +24,7 @@ func NewParser(state *core.BuildState) *Parser {
 	resolve.AllowLambda = true
 	registerBuiltins(state.Config)
 	p := &Parser{}
-	t := p.newThread(nil)
+	t := p.newThread(nil, nil)
 	t.SetLocal("PACKAGE_NAME", "builtins")
 
 	// The ordering here is deliberate; functions must be defined before any
@@ -45,7 +45,7 @@ func NewParser(state *core.BuildState) *Parser {
 
 // ParseFile parses a single BUILD file.
 func (p *Parser) ParseFile(state *core.BuildState, pkg *core.Package, filename string) error {
-	t := p.newThread(pkg)
+	t := p.newThread(state, pkg)
 	globals := skylark.StringDict{}
 	return skylark.ExecFile(t, filename, nil, globals)
 }
@@ -62,7 +62,7 @@ func (p *Parser) load(thread *skylark.Thread, module string) (skylark.StringDict
 		return nil, err
 	}
 	// TODO(peterebden): Proper subinclude deferral
-	t := p.newThread(nil)
+	t := p.newThread(getState(thread), getPkg(thread))
 	globals := skylark.StringDict{}
 	return globals, skylark.ExecFile(t, module, b, globals)
 }
@@ -79,14 +79,25 @@ func (p *Parser) loadBuiltins(thread *skylark.Thread, filename string) {
 }
 
 // newThread creates a new Skylark thread.
-func (p *Parser) newThread(pkg *core.Package) *skylark.Thread {
+func (p *Parser) newThread(state *core.BuildState, pkg *core.Package) *skylark.Thread {
 	t := &skylark.Thread{
 		Print: p.print,
 		Load:  p.load,
 	}
-	if pkg != nil {
+	if state != nil {
+		t.SetLocal("_state", state)
 		t.SetLocal("PACKAGE_NAME", pkg.Name)
 		t.SetLocal("_pkg", pkg)
 	}
 	return t
+}
+
+// getState retrieves the build state object from a Skylark thread.
+func getState(thread *skylark.Thread) *core.BuildState {
+	return thread.Local("_state").(*core.BuildState)
+}
+
+// getPkg gets the package object from a Skylark thread.
+func getPkg(thread *skylark.Thread) *core.Package {
+	return thread.Local("_pkg").(*core.Package)
 }
