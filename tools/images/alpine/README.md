@@ -1,12 +1,15 @@
-Alternative Ubuntu image
-------------------------
+Alpine Linux image
+------------------
 
-This is a modified version of the normal Ubuntu image with different
-OS and package versions. It's not really recommended for normal use
-but exists so we can test that things at least work in this environment.
+This tests Please on CI in an Alpine environment which can differ in some ways
+from the standard Ubuntu setup.
 
-Notable differences:
- - Uses Bionic instead of Artful
- - Go 1.12 (standard one has 1.13)
- - Python 3.6 (standard one has 3.5)
- - Java 9 (still has various issues, standard one uses 8)
+Note that the glibc-compat package must be added to an Alpine environment to
+use standard upstream Please builds. It is not needed here since this Please
+is built entirely within Alpine.
+
+Some packages have different versions in arbitrary ways - for example Python,
+Go and Java. Depending on what's available they may be newer or older than the
+Ubuntu image (as a rule Go tends to be a bit older since we get the latest one
+in the standard image since it builds releases, whereas Python and Java often
+have newer packages available here).

@@ -1,7 +1,7 @@
-This is a prebuilt image based on Ubuntu Bionic which contains
+This is a prebuilt image based on Alpine Linux which contains
 everything you should need to build Please.
-Note that it's an alternative to the standard image so some
-minor issues may exist.
+Note that to use a pre-downloaded Please in an Alpine environment
+you would need to add the glibc-compat package.
 
 Run the following to get started:
  git clone https://github.com/thought-machine/please.git
