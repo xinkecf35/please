@@ -328,7 +328,7 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
                 test_only:bool&testonly=False, deps:list=[], post_install_commands:list=None,
                 install_subdirectory:bool=False, repo:str=None, use_pypi:bool=None, patch:str|list=None,
                 visibility:list=None, zip_safe:bool=True, licences:list=None, pip_flags:str=None,
-                strip:list=[], binary:bool=True):
+                strip:list=[], binary:bool=False):
     """Provides a build rule for third-party dependencies to be installed by pip.
 
     Args:
@@ -427,19 +427,31 @@ def pip_library(name:str, version:str, hashes:list=None, package_name:str=None, 
         sandbox = False,
     )
 
+
+    # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
+    cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
+    if not licences:
+        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
+
     if binary:
-        # TODO: Adding code to do the following:
-        # Find entry_point.txt and parse file to find entrypoints
+        # TODO: Adding code to do the following:b
+        # Find entry_point.txt and to find entrypoints files
+
+        find_entry_points_txt = "find . -name entry_points.txt"
+        extract_entry_points = "awk -F \" = \" '($1 != \"[console_scripts]\") && (NF > 1) {$1=$1; print $1 }'"
+        find_entry_points_mains = f"while read -r line; do find $PKG_DIR/{name}/bin -name $line; done"
+
+        # Need some kind of build rule / filegroup to actually extract evaluate this file
+        entry_points_cmd = f"cat `{find_entry_points_txt}` | {extract_entry_points} | {find_entry_points_mains}"
+
+        log.debug(entry_points_cmd)
+        # enumerate over the endpoints 
         # Somehow define an exectuable with the known information with the Please_PEX tool?
         # Package it all up and define an additional output for this rule as runnable
         # 
         # Need to figure out how to get the dependencies that are needed by the packages
         # Look at the python_binary for help?
 
-    # Don't include the dependency whl's into our whl. They are later picked up by py_binary anyway.
-    cmd = f'$TOOLS_JARCAT z --suffix="" --exclude_suffix=whl --include_other -i . -r $PKG/{name}:$PKG'
-    if not licences:
-        cmd += ' && find . -name METADATA -or -name PKG-INFO | grep -v "^./build/" | xargs grep -E "License ?:" | grep -v UNKNOWN | cat || true'
 
     return build_rule(
         name = name,
